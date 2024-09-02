@@ -18,13 +18,8 @@ impl std::error::Error for Error {}
 
 impl Clip {
     pub fn read_clip_file<Read: std::io::Read>(stream: &mut Read) -> Result<Self, Error> {
-        let mut header_buffer = [0x0_u8; 8];
-        if stream.read_exact(&mut header_buffer).is_err()
-            || header_buffer != [0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50]
-        {
-            return Err(Error::IncorrectClipHeader);
-        }
-        todo!()
+        read_clip_header(stream)?;
+        Ok(Clip(Vec::new()))
     }
 
     pub fn write_clip_file<Write: std::io::Write>(&self, _output: &mut Write) -> Self {
@@ -40,6 +35,16 @@ impl Clip {
     pub fn write_smf<Write: std::io::Write>(&self, _output: &mut Write) -> Self {
         todo!()
     }
+}
+
+fn read_clip_header<Read: std::io::Read>(stream: &mut Read) -> Result<(), Error> {
+    let mut buffer = [0x0_u8; 8];
+    if stream.read_exact(&mut buffer).is_err()
+        || buffer != [0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50]
+    {
+        return Err(Error::IncorrectClipHeader);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -70,9 +75,6 @@ mod tests {
     fn read_clip_checks_for_correct_header() {
         let data: &[u8] = &[0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50];
         let mut read = std::io::Cursor::new(data);
-        assert_eq!(
-            Clip::read_clip_file(&mut read),
-            Ok(Clip(Vec::new()))
-        );
+        assert_eq!(Clip::read_clip_file(&mut read), Ok(Clip(Vec::new())));
     }
 }

@@ -2,6 +2,13 @@
 name = "midi2-clip"
 version = "0.1.0"
 edition = "2021"
+description = "A lightweight utility for reading and writing MIDI 2.0 clip files."
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+authors = [
+    "Ben Leadbetter <ben.leadbetter@hotmail.com>",
+]
+repository = "https://github.com/BenLeadbetter/midi2-clip"
 
 [features]
 smf = ["rimd"]

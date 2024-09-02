@@ -4,6 +4,7 @@ A lightweight utility for reading and writing MIDI 2.0 clip files.
 
 > [!CAUTION]
 > 
+> WIP
 > This project is still in early development.  
 > Expect missing features, breaking changes and bugs. 
 > Please report any issues you encounter.
@@ -13,5 +14,5 @@ A lightweight utility for reading and writing MIDI 2.0 clip files.
 To enable support for Standard MIDI Files (SMF) enable the "smf" feature.
 
 ```toml
-midi2-clip = { version = "0.0.1", features = ["smf"] }
+midi2-clip = { version = "0.1.0", features = ["smf"] }
 ```

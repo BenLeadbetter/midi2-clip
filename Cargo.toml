@@ -1,0 +1,11 @@
+[package]
+name = "midi2-clip"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+smf = ["rimd"]
+
+[dependencies]
+rimd = { version = "0.0.1", optional = true }
+midi2 = "0.6.1"

@@ -16,7 +16,7 @@ impl std::fmt::Display for Error {
         match self {
             Io(err) => write!(f, "IO Error occurred: {err}"),
             Parse(err) => write!(f, "Parsing Error occurred: {err}"),
-            Ump(err) => write!(f, "Ump formatarsing Error occurred: {err}"),
+            Ump(err) => write!(f, "Ump parsing Error occurred: {err}"),
         }
     }
 }

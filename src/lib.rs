@@ -1,6 +1,6 @@
 const CLIP_FILE_HEADER: [u8; 8] = [0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50];
 
-#[derive(Debug, Default, Eq, PartialEq, Clone)]
+#[derive(Default, Eq, PartialEq, Clone)]
 pub struct Clip(Vec<u32>);
 
 #[derive(Debug)]
@@ -59,6 +59,21 @@ impl Clip {
     }
 }
 
+impl core::fmt::Debug for Clip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Clip(")?;
+        let mut iter = self.0.iter().peekable();
+        while let Some(byte) = iter.next() {
+            if iter.peek().is_some() {
+                write!(f, "{:#010X}, ", byte)?;
+            } else {
+                write!(f, "{:#010X})", byte)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 fn read_clip_header<Read: std::io::Read>(stream: &mut Read) -> Result<(), Error> {
     let mut buffer = [0x0_u8; 8];
     stream.read_exact(&mut buffer)?;
@@ -102,6 +117,36 @@ fn read_clip_configuration_header<Read: std::io::Read>(
         read_u32(stream, &mut buffer[..1])?;
         midi2::utility::DeltaClockstampTpq::try_from(&buffer[..1])?;
         clip.0.extend_from_slice(&buffer[..1]);
+    }
+
+    if read_u32(stream, &mut buffer[..1]).is_ok() {
+        // may include a set tempo message without prepended
+        // delta clockstamp message
+        match midi2::utility::DeltaClockstamp::try_from(&buffer[..1]) {
+            Ok(_) => {
+                clip.0.extend_from_slice(&buffer[..1]);
+
+                // we found a delta clockstamp message
+                // this may or may not be for the positional set tempo message
+                read_u32(stream, &mut buffer[..])?;
+                match midi2::flex_data::SetTempo::try_from(&buffer[..]) {
+                    Ok(_) => {
+                        clip.0.extend_from_slice(&buffer[..]);
+                    }
+                    Err(_) => {
+                        todo!()
+                    }
+                }
+            }
+            Err(_) => {
+                // no delta clockstamp message
+                // the following data must be the tail of
+                // a partially read set tempo message
+                read_u32(stream, &mut buffer[1..4])?;
+                midi2::flex_data::SetTempo::try_from(&buffer[..])?;
+                clip.0.extend_from_slice(&buffer[..]);
+            }
+        }
     }
 
     Ok(())
@@ -169,6 +214,58 @@ mod tests {
         assert_eq!(
             &data[..],
             &[0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50][..]
+        );
+    }
+
+    #[test]
+    fn read_clip_with_set_tempo_message_directly_after_dcstpq() {
+        let data: &[u8] = &[
+            0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50, // header
+            0x00, 0x20, 0x00, 0x00, // dcs
+            0x00, 0x30, 0x00, 0x00, // dcstpqn
+            0xD0, 0x10, 0x00, 0x00, // set tempo
+            0x12, 0x34, 0x56, 0x78, // set tempo
+            0x00, 0x00, 0x00, 0x00, // set tempo
+            0x00, 0x00, 0x00, 0x00, // set tempo
+        ];
+        let mut read = std::io::Cursor::new(data);
+        assert_eq!(
+            Clip::read_clip_file(&mut read).unwrap(),
+            Clip(vec![
+                0x0020_0000,
+                0x0030_0000,
+                0xD010_0000,
+                0x1234_5678,
+                0x0,
+                0x0
+            ])
+        );
+    }
+
+    #[test]
+    fn read_clip_with_set_tempo_message_with_preceding_tpqn() {
+        let data: &[u8] = &[
+            0x53, 0x4D, 0x46, 0x32, 0x43, 0x4C, 0x49, 0x50, // header
+            0x00, 0x20, 0x00, 0x00, // dcs
+            0x00, 0x30, 0x00, 0x00, // dcstpqn
+            0x00, 0x20, 0x00, 0x00, // dcs
+            0xD0, 0x10, 0x00, 0x00, // set tempo
+            0x12, 0x34, 0x56, 0x78, // set tempo
+            0x00, 0x00, 0x00, 0x00, // set tempo
+            0x00, 0x00, 0x00, 0x00, // set tempo
+        ];
+        let mut read = std::io::Cursor::new(data);
+        assert_eq!(
+            Clip::read_clip_file(&mut read).unwrap(),
+            Clip(vec![
+                0x0020_0000,
+                0x0030_0000,
+                0x0020_0000,
+                0xD010_0000,
+                0x1234_5678,
+                0x0,
+                0x0
+            ])
         );
     }
 }

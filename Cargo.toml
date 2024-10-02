@@ -15,4 +15,4 @@ smf = ["rimd"]
 
 [dependencies]
 rimd = { version = "0.0.1", optional = true }
-midi2 = { version = "0.6.2", features = ["std", "utility", "channel-voice2"] }
+midi2 = { version = "0.6.2", features = ["std", "utility", "channel-voice2", "flex-data"] }
